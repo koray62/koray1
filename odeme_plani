@@ -1,0 +1,183 @@
+<html>
+<head>
+    <style>
+td {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+        label {
+            display: inline-block;
+            width: 145px;
+        }
+        td {
+            text-align: center;
+            color: darkblue;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Kredi Ödeme Planı</h1>
+    <form id="form">
+        <label for="odeme">Odeme Sekli:</label>
+        <select id="odeme" name="odeme" onchange="secim()">
+            <option value="esit">Esit Taksitli</option>
+            <option value="artan">Artan Taksitli</option>
+        </select><br>
+        <label for="hesap">Hesaplama Sekli:</label>
+        <select id="hesap" name="hesap" onchange="secim()">
+            <option value="kredi">Kullanilacak Kredi Tutarina Gore</option>
+            <option value="taksit">Aylik Odenebilecek Taksit Tutarina Gore</option>
+        </select><br>
+        <label for="anapara">Anapara:</label>
+        <input type="number" id="anapara" name="anapara" value="10000"><br>
+        <label for="taksit">Taksit:</label>
+        <input type="number" id="taksit" name="taksit" value="" disabled><br>
+        <label for="vade">Vade (ay):</label>
+        <input type="number" id="vade" name="vade" value="12"><br>
+        <label for="faiz">Aylik Faiz (%):</label>
+        <input type="number" id="faiz" name="faiz" value="1.99"><br>
+        <label for="artis">Yillik Artis Orani (%):</label>
+        <input type="number" id="artis" name="artis" value="" disabled><br>
+        <label for="tarih">Kullanim Tarihi:</label>
+        <input type="date" id="tarih" name="tarih" value="2023-07-11"><br>
+        <button type="button" onclick="hesapla()">Hesapla</button>
+    </form>
+    <table id="table">
+        <tr>
+            <th>Taksit Tarihi</th><th>Taksit Tutari</th><th>Anapara Odemesi</th><th>Faiz Odemesi</th><th>Kalan Anapara</th>
+        </tr>
+    </table>
+
+<script>
+    function secim() {
+        // Odeme ve hesaplama sekline gore inputlari etkinlestir veya pasiflestir
+        var odeme = document.getElementById("odeme").value;
+        var hesap = document.getElementById("hesap").value;
+        if (odeme == "esit") {
+            document.getElementById("artis").disabled = true;
+            if (hesap == "kredi") {
+                document.getElementById("anapara").disabled = false;
+                document.getElementById("taksit").disabled = true;
+            } else if (hesap == "taksit") {
+                document.getElementById("anapara").disabled = true;
+                document.getElementById("taksit").disabled = false;
+            }
+        } else if (odeme == "artan") {
+            var vade = parseInt(document.getElementById("vade").value);
+            if (vade > 24) {
+                document.getElementById("artis").disabled = false;
+                if (hesap == "kredi") {
+                    document.getElementById("anapara").disabled = false;
+                    document.getElementById("taksit").disabled = true;
+                } else if (hesap == "taksit") {
+                    document.getElementById("anapara").disabled = true;
+                    document.getElementById("taksit").disabled = false;
+                }
+            } else {
+                alert("Artan taksitli odeme sekli icin vade 24 aydan uzun olmali");
+                document.getElementById("odeme").value = "esit";
+                document.getElementById("artis").disabled = true;
+            }
+        }
+    }
+
+    function hesapla() {
+        // Formdan input degerlerini al
+        var odeme = document.getElementById("odeme").value;
+        var hesap = document.getElementById("hesap").value;
+        var anapara = parseFloat(document.getElementById("anapara").value);
+        var taksit = parseFloat(document.getElementById("taksit").value);
+        var vade = parseInt(document.getElementById("vade").value);
+        var faiz = parseFloat(document.getElementById("faiz").value) / 100;
+        var artis = parseFloat(document.getElementById("artis").value) / 100;
+        var tarih = new Date(document.getElementById("tarih").value);
+
+        // Tabloyu temizle
+        var table = document.getElementById("table");
+        while (table.rows.length > 1) {
+            table.deleteRow(1);
+        }
+
+        // Hesaplama sekline gore anapara veya taksit tutarini hesapla
+        if (hesap == "kredi") {
+            if (odeme == "esit") {
+                // Aylik esit taksit tutarini hesapla
+                taksit = anapara * faiz * Math.pow(1 + faiz, vade) / (Math.pow(1 + faiz, vade) - 1);
+                // Taksit inputunu guncelle
+                document.getElementById("taksit").value = taksit.toFixed(0);
+            } else if (odeme == "artan") {
+                // Ilk 12 aylik taksit tutarini hesapla
+                taksit = anapara * faiz * Math.pow(1 + faiz, 12) / (Math.pow(1 + faiz, 12) - 1);
+                // Taksit inputunu guncelle
+                document.getElementById("taksit").value = taksit.toFixed(0);
+            }
+        } else if (hesap == "taksit") {
+            if (odeme == "esit") {
+                // Kullanilacak kredi tutarini hesapla
+                anapara = taksit * (Math.pow(1 + faiz, vade) - 1) / (faiz * Math.pow(1 + faiz, vade));
+                // Anapara inputunu guncelle
+                document.getElementById("anapara").value = anapara.toFixed(0);
+            } else if (odeme == "artan") {
+                // Kullanilacak kredi tutarini hesapla
+                var katsayi = 0;
+                for (var i = 0; i < vade; i += 12) {
+                    katsayi += Math.pow(1 + artis, i / 12);
+                }
+                anapara = taksit * katsayi / (faiz * Math.pow(1 + faiz, 12));
+                // Anapara inputunu guncelle
+                document.getElementById("anapara").value = anapara.toFixed(0);
+            }
+        }
+
+        // Her ay icin tabloya satir ekle
+        for (var i = 1; i < vade + 1; i++) {
+            // Taksit tarihini hesapla
+            var ay = tarih.getMonth() + i + 1;
+            var yil = tarih.getFullYear() + Math.floor(ay / 12);
+            ay = ay % 12;
+            if (ay == 0) ay = 12;
+            var gun = tarih.getDate();
+            var taksit_tarihi = new Date(yil, ay - 1, gun);
+
+            // Anapara ve faiz odemelerini hesapla
+            var faiz_odemesi = anapara * faiz;
+            var anapara_odemesi;
+
+            // Odeme sekline gore taksit tutarini guncelle
+            if (odeme == "esit") {
+                anapara_odemesi = taksit - faiz_odemesi;
+            } else if (odeme == "artan") {
+                if ((vade - i) % 12 == 0 && vade - i > 0) {
+                    // Yillik artis orani kadar artir
+                    taksit *= (1 + artis);
+                    anapara_odemesi = taksit - faiz_odemesi;
+                } else if ((vade - i) % 12 == 0 && vade - i == 0) {
+                    // Son yilda kalan anaparayi esitleyerek hesapla
+                    taksit = anapara * (1 + faiz);
+                    anapara_odemesi = anapara;
+                } else {
+                    anapara_odemesi = taksit - faiz_odemesi;
+                }
+            }
+
+            // Kalan anaparayi guncelle
+            anapara -= anapara_odemesi;
+
+            // Tabloya yeni satir ekle
+            var row = table.insertRow(-1);
+            var cell1 = row.insertCell(0);
+            var cell2 = row.insertCell(1);
+            var cell3 = row.insertCell(2);
+            var cell4 = row.insertCell(3);
+            var cell5 = row.insertCell(4);
+
+            // Satirin icerigini doldur
+            cell1.innerHTML = taksit_tarihi.toLocaleDateString();
+            cell2.innerHTML = taksit.toLocaleString(undefined, {maximumFractionDigits:0});
+            cell3.innerHTML = anapara_odemesi.toLocaleString(undefined, {maximumFractionDigits:0});
+            cell4.innerHTML = faiz_odemesi.toLocaleString(undefined, {maximumFractionDigits:0});
+            cell5.innerHTML = anapara.toLocaleString(undefined, {maximumFractionDigits:0});
+        }
+    }
+</script>

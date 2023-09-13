@@ -1,2 +1,0 @@
-# koray1
-Deneme
